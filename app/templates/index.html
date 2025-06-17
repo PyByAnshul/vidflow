@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidFlow Editor</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .video-thumbnail {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .video-thumbnail:hover {
+            transform: scale(1.05);
+        }
+        .modal-dialog {
+            max-width: 800px;
+        }
+        .modal-body {
+            padding: 0;
+        }
+        video {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>VidFlow Editor</h1>
+        <form action="/api/upload-video/" method="post" enctype="multipart/form-data" class="mt-4">
+            <div class="form-group">
+                <label for="videoFile">Upload Video</label>
+                <input type="file" class="form-control-file" id="videoFile" name="file" accept="video/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+        <div class="mt-4">
+            <h2>Videos</h2>
+            <div id="videoList" class="row">
+            
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">Play Video</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <video id="videoPlayer" controls>
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function loadVideos() {
+            fetch('/api/videos')
+                .then(response => response.json())
+                .then(videos => {
+                    const videoList = document.getElementById('videoList');
+                    videoList.innerHTML = '';
+                    videos.forEach(video => {
+                        const videoElement = document.createElement('div');
+                        videoElement.className = 'col-md-4 mb-4';
+                        videoElement.innerHTML = `
+                            <div class="card">
+                                <img src="${video.thumbnail_url}" class="card-img-top video-thumbnail" alt="Thumbnail" onclick="playVideo('${video.video_url}', '${video.filename}')">
+                                <div class="card-body">
+                                    <h5 class="card-title">${video.filename}</h5>
+                                    <p class="card-text">Status: ${video.status}</p>
+                                    <p class="card-text">Duration: ${video.duration} seconds</p>
+                                    <button class="btn btn-info" onclick="getMetadata('${video.video_id}')">Get Metadata</button>
+                                </div>
+                            </div>
+                        `;
+                        videoList.appendChild(videoElement);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading videos:', error);
+                });
+        }
+
+        function getMetadata(videoId) {
+            fetch(`/api/video-metadata/${videoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    alert(`Metadata: ${JSON.stringify(data)}`);
+                })
+                .catch(error => {
+                    console.error('Error fetching metadata:', error);
+                });
+        }
+
+        function playVideo(videoUrl, filename) {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const fileExtension = filename.split('.').pop().toLowerCase();
+            const mimeType = getMimeType(fileExtension);
+            
+            videoPlayer.innerHTML = `<source src="${videoUrl}" type="${mimeType}">`;
+            videoPlayer.load();
+            $('#videoModal').modal('show');
+            videoPlayer.play();
+        }
+
+        function getMimeType(extension) {
+            const mimeTypes = {
+                'mp4': 'video/mp4',
+                'webm': 'video/webm',
+                'ogg': 'video/ogg',
+                'mov': 'video/quicktime',
+                'avi': 'video/x-msvideo',
+                'wmv': 'video/x-ms-wmv',
+                'flv': 'video/x-flv',
+                'mkv': 'video/x-matroska'
+            };
+            return mimeTypes[extension] || 'video/mp4';
+        }
+
+    
+        loadVideos();
+    </script>
+</body>
+</html> 

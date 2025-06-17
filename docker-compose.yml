@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./videos:/app/videos
+      - ./thumbnails:/app/thumbnails
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - REDIS_URI=redis://redis:6379/0
+    depends_on:
+      - mongodb
+      - redis
+
+  celery_worker:
+    build: .
+    command: celery -A app.tasks.video_tasks worker --loglevel=info
+    volumes:
+      - ./videos:/app/videos
+      - ./thumbnails:/app/thumbnails
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - REDIS_URI=redis://redis:6379/0
+    depends_on:
+      - web
+      - mongodb
+      - redis
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongodb_data:
+  redis_data: 
